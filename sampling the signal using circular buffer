@@ -1,0 +1,65 @@
+const int outputPin = 25;
+const int inputPin = 32;
+
+hw_timer_t *timerToggle = NULL;
+hw_timer_t *timerSample = NULL;
+
+volatile uint16_t buffer[100];
+
+volatile int counter=0;
+volatile bool pinState = false;
+
+volatile bool fullFlag = false;
+
+void IRAM_ATTR sample(){
+  
+  buffer[counter] = analogRead(inputPin);
+  counter++;
+
+  if(counter >= 100)
+  {
+    fullFlag = true;
+    counter = 0;
+  }
+}
+
+void IRAM_ATTR toggle(){
+  pinState = !pinState;
+  digitalWrite(outputPin, pinState);
+}
+
+void setup(){
+  Serial.begin(115200);
+  pinMode(inputPin, INPUT);
+  pinMode(outputPin, OUTPUT);
+
+  timerToggle = timerBegin(1000000);
+  timerSample = timerBegin(1000000);
+
+  timerAttachInterrupt(timerToggle, &toggle);
+  timerAttachInterrupt(timerSample, &sample);
+
+  timerAlarm(timerToggle, 4000, true, 0);
+  timerAlarm(timerSample, 1000, true, 0);
+
+}
+
+void loop(){
+  if(fullFlag){
+    noInterrupts();
+
+    uint16_t localBuffer[100];
+    for(int i=0; i<100; i++){
+      localBuffer[i] = buffer[i];
+    }
+
+    interrupts();
+
+    for(int i=0; i<100; i++){
+      int value = localBuffer[i];
+      float voltage = (value*3.3)/4095.0;
+      Serial.println(voltage);
+    }
+    
+  }
+}
