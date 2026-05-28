@@ -1,0 +1,107 @@
+#include<LovyanGFX.hpp>
+class LGFX : public lgfx::LGFX_Device{
+  lgfx::Panel_ILI9341 _panel;
+  lgfx::Bus_Parallel8 _bus;
+
+  public:
+    LGFX(void){
+      auto cfg = _bus.config();
+      cfg.freq_write = 20000000;
+      cfg.pin_wr = 4;
+      cfg.pin_rd = 2;
+      cfg.pin_rs = 15;
+      cfg.pin_d0 = 12;
+      cfg.pin_d1 = 13;
+      cfg.pin_d2 = 26;
+      cfg.pin_d3 = 25;
+      cfg.pin_d4 = 17;
+      cfg.pin_d5 = 16;
+      cfg.pin_d6 = 27;
+      cfg.pin_d7 = 14;
+
+      _bus.config(cfg);
+      _panel.setBus(&_bus);
+
+      auto pcfg = _panel.config();
+
+      pcfg.pin_cs = 33;
+      pcfg.pin_rst = 32;
+
+      pcfg.memory_height = 320;
+      pcfg.memory_width = 240;
+
+      pcfg.panel_height = 320;
+      pcfg.panel_width = 240;
+
+      _panel.config(pcfg);
+      setPanel(&_panel);
+
+    }
+};
+
+LGFX tft;
+
+const int inputPin = 34;
+
+hw_timer_t *timerToggle = NULL;
+hw_timer_t *timerSample = NULL;
+
+volatile uint16_t buffer[320];
+
+volatile int counter=0;
+
+volatile bool fullFlag = false;
+
+void IRAM_ATTR sample(){
+  
+  buffer[counter] = analogRead(inputPin);
+  counter++;
+
+  if(counter >= 320)
+  {
+    fullFlag = true;
+    counter = 0;
+  }
+}
+
+void setup(){
+
+  tft.init();
+  tft.setRotation(1);
+  tft.fillScreen(TFT_BLACK);
+  Serial.begin(115200);
+  pinMode(inputPin, INPUT);
+  timerSample = timerBegin(1000000);
+  timerAttachInterrupt(timerSample, &sample);
+  timerAlarm(timerSample, 1000, true, 0);
+}
+
+void loop(){
+  if(fullFlag){
+    noInterrupts();
+
+    uint16_t localBuffer[320];
+    for(int i=0; i<320; i++){
+      localBuffer[i] = buffer[i];
+    }
+
+    fullFlag = false;
+
+
+    interrupts();
+    
+    tft.fillScreen(TFT_BLACK);
+
+    int prevX = 0;
+    int prevY = 0;
+
+    for(int i= 1; i<320; i++){
+      int value = localBuffer[i];
+      int voltage = map(value, 0, 4095, 209, 30);
+      tft.drawLine(prevX, prevY, i, voltage, TFT_WHITE);
+      prevX = i;
+      prevY = voltage;
+    }
+    
+  }
+}
