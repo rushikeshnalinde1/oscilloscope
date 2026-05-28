@@ -1,0 +1,86 @@
+#include<LovyanGFX.hpp>
+
+uint pot =  34;
+class LGFX : public lgfx::LGFX_Device{
+  lgfx::Panel_ILI9341 _panel;
+  lgfx::Bus_Parallel8 _bus;
+
+  public:
+    LGFX(void){
+      auto cfg = _bus.config();
+      cfg.freq_write = 20000000;
+      cfg.pin_wr = 4;
+      cfg.pin_rd = 2;
+      cfg.pin_rs = 15;
+      cfg.pin_d0 = 12;
+      cfg.pin_d1 = 13;
+      cfg.pin_d2 = 26;
+      cfg.pin_d3 = 25;
+      cfg.pin_d4 = 17;
+      cfg.pin_d5 = 16;
+      cfg.pin_d6 = 27;
+      cfg.pin_d7 = 14;
+
+      _bus.config(cfg);
+      _panel.setBus(&_bus);
+
+      auto pcfg = _panel.config();
+
+      pcfg.pin_cs = 33;
+      pcfg.pin_rst = 32;
+
+      pcfg.memory_height = 320;
+      pcfg.memory_width = 240;
+
+      pcfg.panel_height = 320;
+      pcfg.panel_width = 240;
+
+      _panel.config(pcfg);
+      setPanel(&_panel);
+
+    }
+};
+
+LGFX tft;
+
+void setup(){
+  pinMode(pot, INPUT);
+  tft.init();
+  tft.setRotation(1);
+  tft.fillScreen(TFT_BLACK);
+  tft.fillRoundRect(10, 10, 300, 60, 10, TFT_WHITE);
+  tft.fillRoundRect(15, 95, 290, 50, 10, TFT_BLACK);
+}
+
+int prevWidth = 0;
+
+void loop() {
+
+  int value = analogRead(pot);
+
+  int width = map(value, 0, 4095, 0, 290);
+
+  // Increase bar
+  if (width > prevWidth) {
+    tft.fillRect(
+      15 + prevWidth,
+      95,
+      width - prevWidth,
+      50,
+      TFT_GREEN
+    );
+  }
+
+  // Decrease bar
+  else if (width < prevWidth) {
+    tft.fillRect(
+      15 + width,
+      95,
+      prevWidth - width,
+      50,
+      TFT_BLACK
+    );
+  }
+
+  prevWidth = width;
+} 
