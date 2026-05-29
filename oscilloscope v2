@@ -73,7 +73,7 @@ void setup(){
   pinMode(inputPin, INPUT);
   timerSample = timerBegin(1000000);
   timerAttachInterrupt(timerSample, &sample);
-  timerAlarm(timerSample, 500, true, 0);
+  timerAlarm(timerSample, 50, true, 0);
 
   tft.fillRect(251, 0, 69, 240, TFT_BLACK); 
   tft.fillRect(252, 1, 68, 58, TFT_WHITE);
